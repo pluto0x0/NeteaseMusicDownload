@@ -13,6 +13,16 @@ vip音乐下载（vip用户only）
 
 使用 python3.8
 
+# usage
+
+将 `NeteaseMusic.default.conf` 重命名为 `NeteaseMusic.conf`。
+
+调整其中配置（[具体说明](https://github.com/pluto0x0/NeteaseMusicDownload/blob/master/NeteaseMusic.default.conf)）
+
+run!
+```
+python NeteaseMusic.py
+```
 # api
 
 from：
