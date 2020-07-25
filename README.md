@@ -11,7 +11,7 @@ vip音乐下载（vip用户only）
 
 ---
 
-使用 python3.8
+[使用 python3.8](https://www.python.org/downloads/)
 
 # usage
 
