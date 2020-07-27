@@ -11,7 +11,7 @@ vip音乐下载（vip用户only）
 
 ---
 
-[使用 python3.8](https://www.python.org/downloads/)
+使用 [python3.8](https://www.python.org/downloads/)
 
 # usage
 
@@ -33,17 +33,19 @@ https://github.com/Binaryify/NeteaseCloudMusicApi
 
 requests
 
-eyed3（可选）
+~~eyed3（可选）~~
 
-how to install：
+mutagen（可选）**（requirement: python >= 3.5）**
+
+## How to install：
 
 ```
 pip3 install requests
-pip3 install eyed3
+pip3 install mutagen
 ```
 
 # todo
 
 Mp3Tag完善功能
 
-歌单数据cache
+歌单数据cache  （done）
