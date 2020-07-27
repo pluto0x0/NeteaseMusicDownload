@@ -1,6 +1,6 @@
 '''
 by @pluto0x0
-
+https://github.com/pluto0x0/NeteaseMusicDownload
 '''
 import requests
 import json
@@ -9,6 +9,7 @@ import re
 import os
 import platform
 from configparser import ConfigParser
+import hashlib
 
 confName = 'NeteaseMusic.conf'
 if not os.path.exists(confName):
@@ -75,6 +76,66 @@ r = requests.get(BASEURL + '/login/' + ('cellphone' if isPhone else 'email'),
                      ('phone' if isPhone else 'email'): UserAccount,
                      'password': UserPasswd
                  })
+
+
+def getDetail(songids):
+    for i in range(len(songids)):
+        song = {'id': songids[i]}
+        print('获取 ', str(song['id']), '...', end='')
+        # 获取音乐信息
+        res = requests.get(BASEURL + '/song/detail',
+                           params={'ids': song['id']})
+        if res.status_code == 200 and res.json()['code'] == 200:
+            data = res.json()['songs'][0]
+            song['name'] = data['name']
+            song['time'] = data['publishTime']
+            song['album'] = data['al']['name']
+            song['pic'] = data['al']['picUrl']
+            song['artists'] = []
+            for ar in data['ar']:
+                song['artists'].append(ar['name'])
+        else:
+            log('音乐' + str(song['id']) + '信息错误' + str(res.status_code) +
+                r.text)
+
+        # 检查是否可用
+        '''
+        res = requests.get(BASEURL + '/check/music',
+                        params={
+                            'id': song['id'],
+                            'cookie': cookie,
+                            'timestamp': int(time.time())
+                        })
+        data = res.json()
+        if not data['success']:
+            log('[{}]{}:{}'.format(song['id'], song['name'], data['message']))
+            log(res.url)
+            print(res.text)
+            continue
+        '''
+        res = requests.get(
+            BASEURL + '/song/url',
+            params={
+                'id': song['id'],
+                'cookie': cookie,
+                'br': config['download']['bitRate']
+                #    ,'timestamp': int(time.time())
+                # 使用timestamp即不使用缓存
+            })
+        if res.status_code == 200 and res.json()['code'] == 200:
+            data = res.json()['data'][0]
+            song['url'] = data['url']
+            song['type'] = data['type']
+            if song['url'] != None or config['download'][
+                    'skipDisabled'] != 'True':
+                songs.append(song)
+            print('完成。')
+        else:
+            log('音乐' + str(song['id']) + 'url错误' + str(res.status_code) +
+                res.text)
+    return songs
+
+
 data = r.json()
 if data['code'] == 200:
     log('登录成功，Welcome：' + data['profile']['nickname'])
@@ -82,7 +143,11 @@ if data['code'] == 200:
 else:
     log('登录失败：' + data['msg'])
 
-r = requests.get(BASEURL + '/playlist/detail', params={'id': id})
+r = requests.get(BASEURL + '/playlist/detail',
+                 params={
+                     'id': id,
+                     'timestamp': int(time.time())
+                 })
 
 if r.status_code != 200:
     ex('歌单请求失败：' + str(r.status_code))
@@ -100,65 +165,40 @@ songs = []
 for song in Ids:
     songids.append(song['id'])
 
-for i in range(len(songids)):
-    song = {'id': songids[i]}
-    print('获取 ', str(song['id']), '...', end='')
-    # 获取音乐信息
-    res = requests.get(BASEURL + '/song/detail', params={'ids': song['id']})
-    if res.status_code == 200 and res.json()['code'] == 200:
-        data = res.json()['songs'][0]
-        song['name'] = data['name']
-        song['album'] = data['al']['name']
-        song['pic'] = data['al']['picUrl']
-        song['artists'] = []
-        for ar in data['ar']:
-            song['artists'].append(ar['name'])
-    else:
-        log('音乐' + str(song['id']) + '信息错误' + str(res.status_code) + r.text)
+md5 = hashlib.md5(repr(songids).encode('utf8')).hexdigest()
+log('歌单：' + md5)
 
-    # 检查是否可用
-    '''
-    res = requests.get(BASEURL + '/check/music',
-                       params={
-                           'id': song['id'],
-                           'cookie': cookie,
-                           'timestamp': int(time.time())
-                       })
-    data = res.json()
-    if not data['success']:
-        log('[{}]{}:{}'.format(song['id'], song['name'], data['message']))
-        log(res.url)
-        print(res.text)
-        continue
-    '''
-    res = requests.get(
-        BASEURL + '/song/url',
-        params={
-            'id': song['id'],
-            'cookie': cookie,
-            'br': config['download']['bitRate']
-            #    ,'timestamp': int(time.time())
-            # 使用timestamp即不使用缓存
-        })
-    if res.status_code == 200 and res.json()['code'] == 200:
-        data = res.json()['data'][0]
-        song['url'] = data['url']
-        song['type'] = data['type']
-        if song['url'] != None or config['download']['skipDisabled'] != 'True':
-            songs.append(song)
-        print('完成。')
+# 判断cache
+cachefilename = 'cache/{}@{}.json'.format(id, config['download']['bitRate'])
+if config['cache']['useCache'] == 'True':
+    if os.path.exists(cachefilename):
+        log('存在cache')
+        with open(cachefilename, 'r', encoding='utf8') as file:
+            data = json.loads(file.read())
+            if data['md5'] == md5 or config['cache']['alwaysCache'] == 'True':
+                print('cache信息校检成功，或已启用alwaysCache选项，使用cache')
+                songs = data['data']
+            else:
+                print('cache信息校检失败，使用cache')
+                songs = getDetail(songids)
     else:
-        log('音乐' + str(song['id']) + 'url错误' + str(res.status_code) + res.text)
+        log('cache不存在')
+        songs = getDetail(songids)
+else:
+    log('不使用cache')
+    songs = getDetail(songids)
 
-with open('details.json', 'w') as logging:
-    logging.write(json.dumps(songs))
-log('写入json完成！')
+# 写入cache
+if config['cache']['saveCache'] == 'True':
+    with open(cachefilename, 'w', encoding='utf8') as logging:
+        logging.write(json.dumps({'md5': md5, 'data': songs}))
+    log('写入cache完成！')
 
 clear = 'cls'
 if re.search('windows', platform.architecture()[1], re.I) == None:
     clear = 'clear'
 
-input('按任意键开始下载…')
+input('按下回车开始下载…')
 
 # 下载
 for i in range(len(songs)):
@@ -240,3 +280,6 @@ for i in range(len(songs)):
                 with open(Dirname + '/' + filename, 'wb') as file:
                     file.write(res.content)
     time.sleep(0.1)
+
+exit()
+# TODO: mutagen

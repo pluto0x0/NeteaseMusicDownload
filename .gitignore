@@ -3,3 +3,6 @@ music/*
 *.log
 NeteaseMusic.conf
 test.*
+test
+cache/*
+new/
