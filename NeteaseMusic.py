@@ -12,8 +12,22 @@ from configparser import ConfigParser
 import hashlib
 
 confName = 'NeteaseMusic.conf'
+# 检测OS类型
+isWindows = (re.search('windows', platform.architecture()[1], re.I) != None)
+
 if not os.path.exists(confName):
-    print('配置文件不存在')
+    print('配置文件不存在，自动下载默认配置...')
+    res = requests.get(
+        'https://raw.githubusercontent.com/pluto0x0/NeteaseMusicDownload/master/NeteaseMusic.default.conf'
+    )
+    if res.status_code == 200:
+        with open(confName, 'wb') as conffile:
+            conffile.write(res.content)
+        print('下载成功，请编辑配置后重新启动该脚本')
+        if isWindows:
+            os.system('start ' + confName)
+    else:
+        print('下载失败！')
     exit()
 
 config = ConfigParser()
@@ -194,10 +208,6 @@ if config['cache']['saveCache'] == 'True':
         logging.write(json.dumps({'md5': md5, 'data': songs}))
     log('写入cache完成！')
 
-clear = 'cls'
-if re.search('windows', platform.architecture()[1], re.I) == None:
-    clear = 'clear'
-
 input('按下回车开始下载…')
 
 # 下载
@@ -215,7 +225,7 @@ for i in range(len(songs)):
         # 危
         fname = eval(FormateStr)
     # 清屏
-    os.system(clear)
+    os.system('cls' if isWindows else 'clear')
     # 显示进度
     print('({:4}/{:4}) {:.2f}%'.format(i + 1, len(songs),
                                        100 * (i + 1) / len(songs)))
