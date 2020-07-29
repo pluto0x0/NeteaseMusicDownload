@@ -1,9 +1,12 @@
 music/*
 *.json
 *.log
+*.py
+!NeteaseMusic.py
 NeteaseMusic.conf
 test.*
 test
 cache/*
-new/
+new/*
+new
 !*.gitkeep
